@@ -1,1 +1,12 @@
 **/node_modules
+.next
+data/
+.git
+.github
+*.md
+docs/
+README.md
+.gitignore
+.eslintrc.json
+.prettierrc.js
+.prettierignore

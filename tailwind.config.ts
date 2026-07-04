@@ -24,6 +24,9 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        montserrat: ['Montserrat', 'sans-serif'],
+      },
       borderColor: ({ colors }) => {
         return {
           light: themeLight(colors),

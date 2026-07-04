@@ -1,13 +1,25 @@
 services:
   vane:
-    image: itzcrazykns1337/vane:latest
+    image: vane:latest
     build:
       context: .
     ports:
       - '3000:3000'
+    environment:
+      HOSTNAME: '0.0.0.0'
+    dns:
+      - 192.168.5.1
+      - 114.114.114.114
     volumes:
       - data:/home/vane/data
     restart: unless-stopped
+
+# 固定网卡名为 br-vane，nftables 规则不会因 docker compose down/up 而失效
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "br-vane"
 
 volumes:
   data:

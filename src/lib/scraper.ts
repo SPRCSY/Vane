@@ -13,8 +13,15 @@ class Scraper {
   private static async initBrowser() {
     await this.browserMutex.runExclusive(async () => {
       if (!this.browser) {
-        const { chromium } = await import('playwright');
-        this.browser = await chromium.launch({
+        let playwrightMod: any;
+        try {
+          playwrightMod = await import('playwright');
+        } catch {
+          throw new Error(
+            'Playwright is not installed. Run: npx playwright install --with-deps --only-shell chromium',
+          );
+        }
+        this.browser = await playwrightMod.chromium.launch({
           headless: true,
           channel: 'chromium-headless-shell',
           args: [

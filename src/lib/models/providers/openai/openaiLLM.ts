@@ -195,22 +195,74 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
   }
 
   async generateObject<T>(input: GenerateObjectInput): Promise<T> {
-    const response = await this.openAIClient.chat.completions.parse({
-      messages: this.convertToOpenAIMessages(input.messages),
-      model: this.config.model,
-      temperature:
-        input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
-      top_p: input.options?.topP ?? this.config.options?.topP,
-      max_completion_tokens:
-        input.options?.maxTokens ?? this.config.options?.maxTokens,
-      stop: input.options?.stopSequences ?? this.config.options?.stopSequences,
-      frequency_penalty:
-        input.options?.frequencyPenalty ??
-        this.config.options?.frequencyPenalty,
-      presence_penalty:
-        input.options?.presencePenalty ?? this.config.options?.presencePenalty,
-      response_format: zodResponseFormat(input.schema, 'object'),
-    });
+    // 先用 OpenAI 的 Structured Outputs（chat.completions.parse）
+    // 兼容 provider（如 DeepSeek）不支持时 fallback 到 json_object
+    let response: any;
+    try {
+      response = await this.openAIClient.chat.completions.parse({
+        messages: this.convertToOpenAIMessages(input.messages),
+        model: this.config.model,
+        temperature:
+          input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
+        top_p: input.options?.topP ?? this.config.options?.topP,
+        max_completion_tokens:
+          input.options?.maxTokens ?? this.config.options?.maxTokens,
+        stop:
+          input.options?.stopSequences ?? this.config.options?.stopSequences,
+        frequency_penalty:
+          input.options?.frequencyPenalty ??
+          this.config.options?.frequencyPenalty,
+        presence_penalty:
+          input.options?.presencePenalty ??
+          this.config.options?.presencePenalty,
+        response_format: zodResponseFormat(input.schema, 'object'),
+      });
+    } catch (err: any) {
+      // DeepSeek 等兼容 provider 不支持 Structured Outputs，降级到 json_object
+      if (
+        err?.status === 400 &&
+        err?.error?.message?.includes('response_format')
+      ) {
+        const schemaStr = JSON.stringify(
+          z.toJSONSchema(input.schema),
+          null,
+          2,
+        );
+        const fallbackMessages = this.convertToOpenAIMessages(
+          input.messages,
+        ).map((msg) => {
+          if (msg.role === 'system') {
+            return {
+              ...msg,
+              content:
+                msg.content +
+                `\n\nYour response MUST be a single JSON object matching this schema:\n\`\`\`json\n${schemaStr}\n\`\`\`\nOutput only the JSON object, no other text.`,
+            };
+          }
+          return msg;
+        });
+
+        const jsonResponse = await this.openAIClient.chat.completions.create({
+          messages: fallbackMessages,
+          model: this.config.model,
+          temperature:
+            input.options?.temperature ??
+            this.config.options?.temperature ??
+            0.3,
+          top_p: input.options?.topP ?? this.config.options?.topP,
+          max_completion_tokens: Math.max(
+            4096,
+            input.options?.maxTokens || 0,
+            this.config.options?.maxTokens || 0,
+          ),
+          response_format: { type: 'json_object' },
+        });
+
+        response = jsonResponse;
+      } else {
+        throw err;
+      }
+    }
 
     if (response.choices && response.choices.length > 0) {
       try {

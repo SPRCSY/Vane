@@ -4,8 +4,12 @@ RUN apt-get update && apt-get install -y python3 python3-pip sqlite3 && rm -rf /
 
 WORKDIR /home/vane
 
+# 国内环境：使用 npmmirror 镜像加速依赖下载
+ENV npm_config_registry=https://registry.npmmirror.com
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 600000
+RUN yarn install --frozen-lockfile --network-timeout 600000 --registry=https://registry.npmmirror.com
 
 COPY tsconfig.json next.config.mjs next-env.d.ts postcss.config.js drizzle.config.ts tailwind.config.ts ./
 COPY src ./src
@@ -33,9 +37,18 @@ COPY --from=builder /home/vane/data ./data
 COPY drizzle ./drizzle
 
 RUN mkdir /home/vane/uploads
+# 国内环境：使用 npmmirror & aliyun 镜像
+ENV YARN_REGISTRY=https://registry.npmmirror.com
+ENV npm_config_registry=https://registry.npmmirror.com
+# PyPI 国内镜像（如不可用会回退到官方）
+ENV PIP_INDEX_URL=https://pypi.org/simple/
 
-RUN yarn add playwright
-RUN yarn playwright install --with-deps --only-shell chromium
+# 用 lockfile 安装 playwright（yarn add 从 npmmirror 单包解析会超时，但 frozen-lockfile 是好的）
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production --network-timeout 600000 --registry=https://registry.npmmirror.com
+
+# 安装 chromium 浏览器引擎
+RUN npx playwright install --with-deps --only-shell chromium
 
 RUN useradd --shell /bin/bash --system \
     --home-dir "/usr/local/searxng" \
