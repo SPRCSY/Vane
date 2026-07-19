@@ -19,7 +19,8 @@ The Alpine deployment is deliberately split into three named images:
 Relevant files:
 
 - `Dockerfile.alpine.base` defines the `next-deps` and `runtime-base` targets.
-- `Dockerfile.alpine` builds the final application from frozen remote base-image digests.
+- `Dockerfile.alpine` builds the final application from versioned public-endpoint ACR base images.
+- `Dockerfile.aliyun` is the ACR-specific variant using the Wulanchabu `-vpc` endpoints. Keep its application stages in sync with `Dockerfile.alpine`.
 - `docker-compose.yaml` overrides those remote defaults with the local aliases `localhost/vane-next-deps:local` and `localhost/vane-runtime-base:local`.
 - `scripts/build-alpine-images.sh` is for intentional base-image rebuilds, not routine code changes.
 
@@ -47,7 +48,9 @@ The local copies of both base images were intentionally deleted after upload to 
 
 Do not rebuild either base image for TypeScript, CSS, prompt, Social search, `searxng/settings.yml`, limiter, or entrypoint changes.
 
-For an ACR build, `Dockerfile.alpine` already uses the frozen remote digests. ACR Personal Edition must use the public `crpi-...personal.cr.aliyuncs.com` endpoint. Do not replace it with the `-vpc` endpoint: Personal Edition managed builds do not support VPC base-image addresses.
+ACR rejected the Podman-recorded `@sha256` values as `not found`, even though authentication succeeded. Final Dockerfiles therefore use versioned tags that must never be overwritten.
+
+For an ACR build, try `Dockerfile.aliyun`, which uses the user-provided Wulanchabu `-vpc` endpoints. If the Personal Edition builder cannot reach VPC endpoints, switch the build rule to `Dockerfile.alpine`; it uses the same tags through the public endpoint.
 
 For a local Compose rebuild, first restore the local aliases if they are absent:
 
@@ -69,7 +72,7 @@ Before rebuilding a base, explain why it must change and which input invalidated
 - Dependency base: changes are keyed by the first 12 characters of the input `yarn.lock` SHA-256. Keep Yarn as the authoritative package manager; do not commit `package-lock.json`.
 - Runtime base: pin a full SearXNG commit. Build with `--http-proxy=false`; automatic Podman build proxy injection caused Alpine mirror failures in this environment.
 - `Dockerfile.alpine.base` defaults to the USTC Alpine HTTPS mirror. USTC worked reliably when the build proxy was disabled. BFSU produced TLS EOF/package download errors during a full Chromium installation; do not switch mirrors without testing from a temporary Alpine container.
-- After pushing a new base tag, obtain its registry digest, update the corresponding default `ARG` in `Dockerfile.alpine`, build and test the final image, then commit the digest change to `deploy`.
+- After pushing a new base tag, update the corresponding default `ARG` in both final Dockerfiles, build and test the final image, then commit the version change to `deploy`.
 - Never overwrite the documented version tags. Create a new versioned tag and digest.
 
 ## Required verification
@@ -101,7 +104,7 @@ The intended final repository is `wrcloudcc/vane`, bound to GitHub `SPRCSY/Vane`
 - Source type: Branch
 - Branch: `deploy`
 - Context: repository root
-- Dockerfile: `Dockerfile.alpine`
+- Dockerfile: `Dockerfile.aliyun`; fall back to `Dockerfile.alpine` if the Personal Edition builder cannot reach the VPC endpoint.
 - Tag: `latest`
 - Automatic build on code change: enabled
 - Overseas build: disabled
