@@ -44,7 +44,7 @@ const searchVideos = async (
   });
 
   const searchRes = await searchSearxng(res.query, {
-    engines: ['youtube'],
+    engines: ['youtube', 'bilibili'],
   });
 
   const videos: VideoSearchResult[] = [];

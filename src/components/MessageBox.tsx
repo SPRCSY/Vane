@@ -72,7 +72,13 @@ const MessageBox = ({
 
   const hasContent = section.parsedTextBlocks.length > 0;
 
-  const { speechStatus, start, stop } = useSpeech({ text: speechMessage });
+  // react-text-to-speech otherwise generates this ID with crypto.randomUUID(),
+  // which is unavailable when Vane is opened over plain HTTP on a LAN address.
+  const speechOptions = {
+    id: section.message.messageId,
+    text: speechMessage,
+  };
+  const { speechStatus, start, stop } = useSpeech(speechOptions);
 
   const markdownOverrides: MarkdownToJSX.Options = {
     renderRule(next, node, renderChildren, state) {

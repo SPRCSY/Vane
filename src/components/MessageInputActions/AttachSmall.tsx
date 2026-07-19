@@ -15,7 +15,7 @@ const AttachSmall = () => {
   const { files, setFiles, setFileIds, fileIds } = useChat();
 
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<any>();
+  const fileInputRef = useRef<any>(null);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;

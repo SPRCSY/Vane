@@ -1,0 +1,46 @@
+ARG NEXT_DEPS_IMAGE=crpi-nhogexmk1j5bm5vt.cn-wulanchabu.personal.cr.aliyuncs.com/wrcloudcc/vane-next-deps@sha256:8cd83e260cca042bb50cf518bac4b1e7962d6093af3e3eb17e1bbd526c681ce6
+ARG RUNTIME_BASE_IMAGE=crpi-nhogexmk1j5bm5vt.cn-wulanchabu.personal.cr.aliyuncs.com/wrcloudcc/vane-runtime-base@sha256:6c861b06f38e3698eee302403adea3de45148ee8b931026faf3ba26a1453efe4
+
+FROM ${NEXT_DEPS_IMAGE} AS next-builder
+
+WORKDIR /home/vane
+
+COPY tsconfig.json next.config.mjs next-env.d.ts postcss.config.mjs drizzle.config.ts ./
+COPY src ./src
+COPY public ./public
+COPY drizzle ./drizzle
+
+RUN mkdir -p /home/vane/data && yarn build
+
+
+FROM ${RUNTIME_BASE_IMAGE} AS runner
+
+WORKDIR /home/vane
+
+COPY --from=next-builder /home/vane/public ./public
+COPY --from=next-builder /home/vane/.next/static ./public/_next/static
+COPY --from=next-builder /home/vane/.next/standalone ./
+COPY --from=next-builder /home/vane/data ./data
+COPY --from=next-builder /home/vane/drizzle ./drizzle
+
+# Playwright is dynamically imported and therefore is not fully traced by Next.js.
+COPY --from=next-builder /home/vane/node_modules/playwright ./node_modules/playwright
+COPY --from=next-builder /home/vane/node_modules/playwright-core ./node_modules/playwright-core
+
+RUN mkdir -p /home/vane/uploads
+
+# These files remain in the small, frequently changing application layer.
+COPY searxng/settings.yml /etc/searxng/settings.yml
+COPY searxng/limiter.toml /etc/searxng/limiter.toml
+COPY searxng/uwsgi.ini /etc/searxng/uwsgi.ini
+RUN chown -R searxng:searxng /etc/searxng
+
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && sed -i 's/\r$//' ./entrypoint.sh
+
+EXPOSE 3000 8080
+
+ENV NODE_OPTIONS="--max-old-space-size=16384"
+ENV SEARXNG_API_URL=http://localhost:8080
+
+CMD ["/home/vane/entrypoint.sh"]

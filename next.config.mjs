@@ -27,6 +27,10 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_VERSION: pkg.version,
   },
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.join(import.meta.dirname, 'src');
+    return config;
+  },
   turbopack: {
     root: process.cwd(),
   },

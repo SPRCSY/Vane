@@ -94,10 +94,16 @@ export type ReasoningResearchAction = {
   reasoning: string;
 };
 
+export type ToolErrorActionOutput = {
+  type: 'tool_error';
+  error: string;
+};
+
 export type ActionOutput =
   | SearchActionOutput
   | DoneActionOutput
-  | ReasoningResearchAction;
+  | ReasoningResearchAction
+  | ToolErrorActionOutput;
 
 export interface ResearchAction<
   TSchema extends z.ZodObject<any> = z.ZodObject<any>,

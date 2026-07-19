@@ -1,6 +1,9 @@
 import { ActionOutput, ResearcherInput, ResearcherOutput } from '../types';
 import { ActionRegistry } from './actions';
-import { getResearcherPrompt } from '@/lib/prompts/search/researcher';
+import {
+  getResearcherStateMessage,
+  getResearcherSystemPrompt,
+} from '@/lib/prompts/search/researcher';
 import SessionManager from '@/lib/session';
 import { Message, ReasoningResearchBlock } from '@/lib/types';
 import formatChatHistoryAsString from '@/lib/utils/formatHistory';
@@ -19,20 +22,17 @@ class Researcher {
           ? 6
           : 25;
 
-    const availableTools = ActionRegistry.getAvailableActionTools({
+    const allTools = ActionRegistry.getAllActionTools({
+      mode: input.config.mode,
+    });
+
+    const availableToolNames = ActionRegistry.getAvailableActionNames({
       classification: input.classification,
       fileIds: input.config.fileIds,
       mode: input.config.mode,
       sources: input.config.sources,
     });
-
-    const availableActionsDescription =
-      ActionRegistry.getAvailableActionsDescriptions({
-        classification: input.classification,
-        fileIds: input.config.fileIds,
-        mode: input.config.mode,
-        sources: input.config.sources,
-      });
+    const availableToolNameSet = new Set(availableToolNames);
 
     const researchBlockId = crypto.randomUUID();
 
@@ -44,36 +44,38 @@ class Researcher {
       },
     });
 
-    const agentMessageHistory: Message[] = [
-      {
-        role: 'user',
-        content: `
-          <conversation>
-          ${formatChatHistoryAsString(input.chatHistory.slice(-10))}
-           User: ${input.followUp} (Standalone question: ${input.classification.standaloneFollowUp})
-           </conversation>
-        `,
-      },
-    ];
+    const researcherSystemPrompt = getResearcherSystemPrompt();
+    const conversation = formatChatHistoryAsString(
+      input.chatHistory.slice(-10),
+    );
+    const agentMessageHistory: Message[] = [];
 
     for (let i = 0; i < maxIteration; i++) {
-      const researcherPrompt = getResearcherPrompt(
-        availableActionsDescription,
-        input.config.mode,
-        i,
+      const researcherStateMessage = getResearcherStateMessage({
+        mode: input.config.mode,
+        iteration: i,
         maxIteration,
-        input.config.fileIds,
-      );
+        allowedTools: availableToolNames,
+        fileIds: input.config.fileIds,
+        conversation,
+        followUp: input.followUp,
+        standaloneFollowUp: input.classification.standaloneFollowUp,
+        includeTaskContext: i === 0,
+      });
+      agentMessageHistory.push({
+        role: 'user',
+        content: researcherStateMessage,
+      });
 
       const actionStream = input.config.llm.streamText({
         messages: [
           {
             role: 'system',
-            content: researcherPrompt,
+            content: researcherSystemPrompt,
           },
           ...agentMessageHistory,
         ],
-        tools: availableTools,
+        tools: allTools,
       });
 
       const block = session.getBlock(researchBlockId);
@@ -88,6 +90,7 @@ class Researcher {
           partialRes.toolCallChunk.forEach((tc) => {
             if (
               tc.name === '__reasoning_preamble' &&
+              availableToolNameSet.has('__reasoning_preamble') &&
               tc.arguments['plan'] &&
               !reasoningEmitted &&
               block &&
@@ -110,6 +113,7 @@ class Researcher {
               ]);
             } else if (
               tc.name === '__reasoning_preamble' &&
+              availableToolNameSet.has('__reasoning_preamble') &&
               tc.arguments['plan'] &&
               reasoningEmitted &&
               block &&
@@ -161,14 +165,25 @@ class Researcher {
         tool_calls: finalToolCalls,
       });
 
-      const actionResults = await ActionRegistry.executeAll(finalToolCalls, {
-        llm: input.config.llm,
-        embedding: input.config.embedding,
-        session: session,
-        researchBlockId: researchBlockId,
-        fileIds: input.config.fileIds,
-        mode: input.config.mode,
-      });
+      const actionResults = await Promise.all(
+        finalToolCalls.map(async (toolCall) => {
+          if (!availableToolNameSet.has(toolCall.name)) {
+            return {
+              type: 'tool_error',
+              error: `Tool "${toolCall.name}" is not allowed in the current research state. Allowed tools: ${availableToolNames.join(', ')}`,
+            } as ActionOutput;
+          }
+
+          return ActionRegistry.execute(toolCall.name, toolCall.arguments, {
+            llm: input.config.llm,
+            embedding: input.config.embedding,
+            session: session,
+            researchBlockId: researchBlockId,
+            fileIds: input.config.fileIds,
+            mode: input.config.mode,
+          });
+        }),
+      );
 
       actionOutput.push(...actionResults);
 

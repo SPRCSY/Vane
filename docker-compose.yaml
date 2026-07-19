@@ -1,15 +1,19 @@
 services:
   vane:
-    image: vane:latest
+    image: localhost/vane:latest
     build:
       context: .
+      dockerfile: Dockerfile.alpine
+      args:
+        NEXT_DEPS_IMAGE: ${VANE_NEXT_DEPS_IMAGE:-localhost/vane-next-deps:local}
+        RUNTIME_BASE_IMAGE: ${VANE_RUNTIME_BASE_IMAGE:-localhost/vane-runtime-base:local}
     ports:
       - '3000:3000'
     environment:
       HOSTNAME: '0.0.0.0'
     dns:
       - 192.168.5.1
-      - 114.114.114.114
+      - 8.8.8.8
     volumes:
       - data:/home/vane/data
     restart: unless-stopped

@@ -10,8 +10,10 @@ IT WILL BE AUTOMATICALLY TRIGGERED IF MAXIMUM ITERATIONS ARE REACHED SO IF YOU'R
 const doneAction: ResearchAction<any> = {
   name: 'done',
   schema: z.object({}),
-  getToolDescription: () =>
-    'Only call this after __reasoning_preamble AND after any other needed tool calls when you truly have enough to answer. Do not call if information is still missing.',
+  getToolDescription: ({ mode }) =>
+    mode === 'speed'
+      ? 'Only call this after any needed information-gathering calls when you truly have enough to answer. Do not call if information is still missing.'
+      : 'Only call this after __reasoning_preamble AND after any other needed tool calls when you truly have enough to answer. Do not call if information is still missing.',
   getDescription: () => actionDescription,
   enabled: (_) => true,
   execute: async (params, additionalConfig) => {

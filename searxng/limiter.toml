@@ -1,3 +1,9 @@
+[botdetection]
+trusted_proxies = [
+  '127.0.0.0/8',
+  '::1',
+]
+
 [botdetection.ip_limit]
 # activate link_token method in the ip_limit method
 link_token = true

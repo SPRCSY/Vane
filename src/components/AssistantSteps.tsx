@@ -198,7 +198,7 @@ const AssistantSteps = ({
                                     <img
                                       src={faviconUrl}
                                       alt=""
-                                      className="w-3 h-3 rounded-sm flex-shrink-0"
+                                      className="w-3 h-3 rounded-xs shrink-0"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none';
                                       }}

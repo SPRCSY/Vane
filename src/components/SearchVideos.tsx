@@ -165,7 +165,7 @@ const Searchvideos = ({
                       key={i}
                       src={video.img_src}
                       alt={video.title}
-                      className="h-6 w-12 rounded-md lg:h-3 lg:w-6 lg:rounded-sm aspect-video object-cover"
+                      className="h-6 w-12 rounded-md lg:h-3 lg:w-6 lg:rounded-xs aspect-video object-cover"
                     />
                   ))}
                 </div>

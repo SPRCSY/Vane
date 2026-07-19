@@ -25,9 +25,32 @@ class ActionRegistry {
     mode: SearchAgentConfig['mode'];
     sources: SearchSources[];
   }): ResearchAction[] {
-    return Array.from(
-      this.actions.values().filter((action) => action.enabled(config)),
+    return Array.from(this.actions.values()).filter((action) =>
+      action.enabled(config),
     );
+  }
+
+  static getAllActions(): ResearchAction[] {
+    return Array.from(this.actions.values());
+  }
+
+  static getAvailableActionNames(config: {
+    classification: ClassifierOutput;
+    fileIds: string[];
+    mode: SearchAgentConfig['mode'];
+    sources: SearchSources[];
+  }): string[] {
+    return this.getAvailableActions(config).map((action) => action.name);
+  }
+
+  static getAllActionTools(config: {
+    mode: SearchAgentConfig['mode'];
+  }): Tool[] {
+    return this.getAllActions().map((action) => ({
+      name: action.name,
+      description: action.getToolDescription({ mode: config.mode }),
+      schema: action.schema,
+    }));
   }
 
   static getAvailableActionTools(config: {

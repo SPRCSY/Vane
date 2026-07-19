@@ -23,6 +23,7 @@ export const searchSearxng = async (
   opts?: SearxngSearchOptions,
 ) => {
   const searxngURL = getSearxngURL();
+  const searxngOrigin = new URL(searxngURL);
 
   const url = new URL(`${searxngURL}/search?format=json`);
   url.searchParams.append('q', query);
@@ -40,9 +41,19 @@ export const searchSearxng = async (
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const isLocalSearxng =
+    searxngOrigin.hostname === 'localhost' ||
+    searxngOrigin.hostname === '127.0.0.1' ||
+    searxngOrigin.hostname === '::1';
 
   try {
     const res = await fetch(url, {
+      headers: isLocalSearxng
+        ? {
+            'X-Forwarded-For': '127.0.0.1',
+            'X-Real-IP': '127.0.0.1',
+          }
+        : undefined,
       signal: controller.signal,
     });
 

@@ -21,9 +21,13 @@ class Scraper {
             'Playwright is not installed. Run: npx playwright install --with-deps --only-shell chromium',
           );
         }
+        const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
         this.browser = await playwrightMod.chromium.launch({
           headless: true,
-          channel: 'chromium-headless-shell',
+          ...(executablePath
+            ? { executablePath }
+            : { channel: 'chromium-headless-shell' }),
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

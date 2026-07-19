@@ -1,0 +1,99 @@
+ARG NODE_IMAGE=node:24.5.0-alpine
+
+# Rebuild this image only when package.json, yarn.lock, Node, or build tools change.
+FROM ${NODE_IMAGE} AS next-deps
+
+ARG ALPINE_MIRROR=mirrors.ustc.edu.cn
+
+RUN sed -i "s#https\\?://dl-cdn.alpinelinux.org/alpine#https://${ALPINE_MIRROR}/alpine#g" /etc/apk/repositories && \
+    apk add --no-cache \
+      build-base \
+      python3 \
+      sqlite
+
+WORKDIR /home/vane
+
+ENV npm_config_registry=https://registry.npmmirror.com
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+COPY package.json yarn.lock ./
+RUN yarn install --network-timeout 600000 --registry=https://registry.npmmirror.com
+
+
+# Rebuild this image only when Node, Alpine packages, or SEARXNG_REF changes.
+# Application source and local SearXNG configuration deliberately do not enter it.
+FROM ${NODE_IMAGE} AS runtime-base
+
+ARG ALPINE_MIRROR=mirrors.ustc.edu.cn
+ARG SEARXNG_REPO=https://github.com/searxng/searxng.git
+ARG SEARXNG_MIRROR=https://gitee.com/mirrors/searxng.git
+ARG SEARXNG_REF=277d8469cdd4af423a42783ad426e0de09f4e2e9
+
+RUN sed -i "s#https\\?://dl-cdn.alpinelinux.org/alpine#https://${ALPINE_MIRROR}/alpine#g" /etc/apk/repositories && \
+    apk add --no-cache \
+      alsa-lib \
+      bash \
+      build-base \
+      ca-certificates \
+      chromium \
+      curl \
+      dbus-libs \
+      freetype \
+      git \
+      harfbuzz \
+      libffi-dev \
+      libgcc \
+      libstdc++ \
+      libxml2-dev \
+      libxslt-dev \
+      nss \
+      openssl-dev \
+      py3-pip \
+      py3-virtualenv \
+      python3 \
+      python3-dev \
+      sqlite \
+      sudo \
+      tzdata \
+      ttf-freefont \
+      uwsgi \
+      uwsgi-python3 \
+      zlib-dev
+
+RUN if [ ! -x /usr/bin/chromium-browser ] && [ -x /usr/bin/chromium ]; then \
+      ln -s /usr/bin/chromium /usr/bin/chromium-browser; \
+    fi
+
+ENV YARN_REGISTRY=https://registry.npmmirror.com
+ENV npm_config_registry=https://registry.npmmirror.com
+ENV PIP_INDEX_URL=https://pypi.org/simple/
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN addgroup -S searxng && \
+    adduser -S -G searxng -h /usr/local/searxng -s /bin/bash searxng && \
+    mkdir -p /usr/local/searxng /etc/searxng && \
+    chown -R searxng:searxng /usr/local/searxng
+
+USER searxng
+
+RUN git init /usr/local/searxng/searxng-src && \
+    cd /usr/local/searxng/searxng-src && \
+    git remote add origin "${SEARXNG_REPO}" && \
+    (git fetch --depth=1 origin "${SEARXNG_REF}" || \
+      (git remote set-url origin "${SEARXNG_MIRROR}" && \
+       GIT_SSL_NO_VERIFY=true git fetch --depth=1 origin "${SEARXNG_REF}")) && \
+    git checkout --detach FETCH_HEAD
+
+RUN python3 -m venv /usr/local/searxng/searx-pyenv && \
+    /usr/local/searxng/searx-pyenv/bin/pip install \
+      --upgrade pip setuptools wheel pyyaml msgspec typing_extensions && \
+    cd /usr/local/searxng/searxng-src && \
+    /usr/local/searxng/searx-pyenv/bin/pip install \
+      --use-pep517 --no-build-isolation -e .
+
+USER root
+
+RUN echo "searxng ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+WORKDIR /home/vane

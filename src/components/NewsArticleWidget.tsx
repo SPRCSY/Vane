@@ -27,7 +27,7 @@ const NewsArticleWidget = () => {
   }, []);
 
   return (
-    <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl border border-light-200 dark:border-dark-200 shadow-sm shadow-light-200/10 dark:shadow-black/25 flex flex-row items-stretch w-full h-24 min-h-[96px] max-h-[96px] p-0 overflow-hidden">
+    <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl border border-light-200 dark:border-dark-200 shadow-xs shadow-light-200/10 dark:shadow-black/25 flex flex-row items-stretch w-full h-24 min-h-[96px] max-h-[96px] p-0 overflow-hidden">
       {loading ? (
         <div className="animate-pulse flex flex-row items-stretch w-full h-full">
           <div className="w-24 min-w-24 max-w-24 h-full bg-light-200 dark:bg-dark-200" />
