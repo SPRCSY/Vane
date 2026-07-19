@@ -1,4 +1,4 @@
-ARG NEXT_DEPS_IMAGE=crpi-nhogexmk1j5bm5vt.cn-wulanchabu.personal.cr.aliyuncs.com/wrcloudcc/vane-next-deps:node24-lock-d03c1d1ad5c
+ARG NEXT_DEPS_IMAGE=crpi-nhogexmk1j5bm5vt.cn-wulanchabu.personal.cr.aliyuncs.com/wrcloudcc/vane-next-deps:node24-lock-e5a838041f38
 ARG RUNTIME_BASE_IMAGE=crpi-nhogexmk1j5bm5vt.cn-wulanchabu.personal.cr.aliyuncs.com/wrcloudcc/vane-runtime-base:node24-searxng-277d8469cdd4-slim3
 
 FROM ${NEXT_DEPS_IMAGE} AS next-builder

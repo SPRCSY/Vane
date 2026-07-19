@@ -9,7 +9,7 @@ class ConfigManager {
     process.env.DATA_DIR || process.cwd(),
     '/data/config.json',
   );
-  configVersion = 1;
+  configVersion = 2;
   currentConfig: Config = {
     version: this.configVersion,
     setupComplete: false,
@@ -168,7 +168,13 @@ class ConfigManager {
   }
 
   private migrateConfig(config: Config): Config {
-    /* TODO: Add migrations */
+    if ((config.version ?? 1) < 2) {
+      config.modelProviders = (config.modelProviders ?? []).filter(
+        (provider) => provider.type !== 'transformers',
+      );
+      config.version = 2;
+    }
+
     return config;
   }
 

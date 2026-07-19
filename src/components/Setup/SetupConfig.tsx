@@ -63,11 +63,8 @@ const SetupConfig = ({
     }
   };
 
-  const visibleProviders = providers.filter(
-    (p) => p.name.toLowerCase() !== 'transformers',
-  );
   const hasProviders =
-    visibleProviders.filter((p) => p.chatModels.length > 0).length > 0;
+    providers.filter((p) => p.chatModels.length > 0).length > 0;
 
   return (
     <div className="w-[95vw] md:w-[80vw] lg:w-[65vw] mx-auto px-2 sm:px-4 md:px-6 flex flex-col space-y-6">
@@ -104,7 +101,7 @@ const SetupConfig = ({
                     Loading providers...
                   </p>
                 </div>
-              ) : visibleProviders.length === 0 ? (
+              ) : providers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 md:py-12 text-center">
                   <p className="text-xs sm:text-sm font-medium text-black/70 dark:text-white/70">
                     No connections configured
@@ -114,7 +111,7 @@ const SetupConfig = ({
                   </p>
                 </div>
               ) : (
-                visibleProviders.map((provider) => (
+                providers.map((provider) => (
                   <ModelProvider
                     key={`provider-${provider.id}`}
                     fields={
