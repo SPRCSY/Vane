@@ -44,3 +44,4 @@ certificates
 .reasonix/
 reasonix.toml
 docker-compose.alpine.yaml
+/AGENTS.md
