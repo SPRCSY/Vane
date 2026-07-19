@@ -29,6 +29,7 @@ maintained on the `deploy` branch and are not part of upstream Vane.
 | Image size | Clears Yarn/pip caches and builds SearXNG in a disposable compiler stage | Current local sizes are approximately 1.95 GB for `vane-next-deps`, 1.16 GB for `vane-runtime-base`, and 1.41 GB for the final image. |
 | Embeddings | Removes the built-in Hugging Face Transformers/ONNX embedding provider | The zero-configuration local embedding fallback is gone. Configure another embedding-capable provider, such as OpenAI, Gemini, Ollama, LM Studio, or Lemonade, before using search, file uploads, or RAG. Existing configuration is migrated automatically. |
 | OpenAI-compatible providers | Falls back from Structured Outputs to JSON mode when a compatible endpoint rejects `response_format` schemas | Providers such as DeepSeek-compatible endpoints can still complete structured research actions when they do not implement OpenAI's full Structured Outputs API. |
+| Context-prefix caching | Keeps researcher/writer system prompts and tool schemas stable, moves query-specific state into later user messages, and includes the full task context only once per research loop | Improves provider-side prompt-prefix matching and cache reuse during multi-step research, reducing repeated input tokens and latency. Server-side allow-lists still enforce which tools may run in each step. |
 
 X, Sina Weibo, TikTok, and other login-wall platforms are intentionally not
 enabled in this fork. The current Social scope is Reddit, Bilibili, Zhihu, and
