@@ -14,6 +14,42 @@ Vane is a **privacy-focused AI answering engine** that runs entirely on your own
 
 Want to know more about its architecture and how it works? You can read it [here](https://github.com/ItzCrazyKns/Vane/tree/master/docs/architecture/README.md).
 
+## Fork-specific changes / 与官方版本的关键区别
+
+This repository is a deployment-oriented fork of
+[ItzCrazyKns/Vane](https://github.com/ItzCrazyKns/Vane). The changes below are
+maintained on the `deploy` branch and are not part of upstream Vane.
+
+| Area | This fork | User-visible impact |
+| --- | --- | --- |
+| Social search | Keeps Reddit, adds native SearXNG Bilibili search, and adds site-directed Zhihu and Xiaohongshu (RedNote) searches | The **Social/Discussions** source covers Reddit, Bilibili, Zhihu, and Xiaohongshu. A failure from one platform does not fail the whole Social search. Zhihu and Xiaohongshu results depend on public pages indexed by the configured web engines; this is not logged-in API access. |
+| Video search | Searches both YouTube and Bilibili | Bilibili video pages can appear in the video result rail, while Bilibili Social results can be used as research sources. |
+| Page extraction | Uses Playwright with Alpine's system Chromium | Vane can render discovered pages without downloading a second Playwright-managed browser. SearXNG itself does not have a Playwright mode; browser rendering happens in Vane after discovery. |
+| Container deployment | Adds a reproducible Podman/Alpine build split into `vane-next-deps`, `vane-runtime-base`, and the frequently changing application image | Code-only rebuilds reuse the large dependency and Chromium/SearXNG layers. SearXNG is pinned to a full commit and bundled in the final container. |
+| Image size | Clears Yarn/pip caches and builds SearXNG in a disposable compiler stage | Current local sizes are approximately 1.95 GB for `vane-next-deps`, 1.16 GB for `vane-runtime-base`, and 1.41 GB for the final image. |
+| Embeddings | Removes the built-in Hugging Face Transformers/ONNX embedding provider | The zero-configuration local embedding fallback is gone. Configure another embedding-capable provider, such as OpenAI, Gemini, Ollama, LM Studio, or Lemonade, before using search, file uploads, or RAG. Existing configuration is migrated automatically. |
+| OpenAI-compatible providers | Falls back from Structured Outputs to JSON mode when a compatible endpoint rejects `response_format` schemas | Providers such as DeepSeek-compatible endpoints can still complete structured research actions when they do not implement OpenAI's full Structured Outputs API. |
+
+X, Sina Weibo, TikTok, and other login-wall platforms are intentionally not
+enabled in this fork. The current Social scope is Reddit, Bilibili, Zhihu, and
+Xiaohongshu.
+
+### Building this fork with Podman
+
+The upstream installation instructions remain below for reference. To build the
+custom `deploy` branch and its Alpine image locally, use:
+
+```bash
+git clone --branch deploy https://github.com/SPRCSY/Vane.git
+cd Vane
+./scripts/build-alpine-images.sh --app-image localhost/vane:latest
+podman-compose up -d --no-build vane
+```
+
+The first command builds the two reusable base images and the final application
+image. Later code-only builds reuse the local base tags. Persistent application
+state remains in the `vane-data` volume.
+
 ## ✨ Features
 
 🤖 **Support for all major AI providers** - Use local LLMs through Ollama or connect to OpenAI, Anthropic Claude, Google Gemini, Groq, and more. Mix and match models based on your needs.
